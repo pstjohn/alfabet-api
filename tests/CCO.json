@@ -1,0 +1,72 @@
+[
+  {
+    "molecule": "CCO",
+    "bond_index": 0,
+    "bond_type": "C-C",
+    "fragment1": "[CH2]O",
+    "fragment2": "[CH3]",
+    "is_valid_stereo": true,
+    "bde_pred": 87.69755554199219,
+    "bdfe_pred": 74.7851333618164,
+    "bde": 87.25136139599007,
+    "bdfe": 74.338481194,
+    "set": "valid",
+    "has_dft_bde": true
+  },
+  {
+    "molecule": "CCO",
+    "bond_index": 5,
+    "bond_type": "C-H",
+    "fragment1": "[H]",
+    "fragment2": "C[CH]O",
+    "is_valid_stereo": true,
+    "bde_pred": 93.41523742675781,
+    "bdfe_pred": 84.71998596191406,
+    "bde": 93.1882240449644,
+    "bdfe": 84.582565619,
+    "set": "valid",
+    "has_dft_bde": true
+  },
+  {
+    "molecule": "CCO",
+    "bond_index": 1,
+    "bond_type": "C-O",
+    "fragment1": "[CH2]C",
+    "fragment2": "[OH]",
+    "is_valid_stereo": true,
+    "bde_pred": 95.3841781616211,
+    "bdfe_pred": 83.59730529785156,
+    "bde": 94.81535488197616,
+    "bdfe": 83.055836222,
+    "set": "valid",
+    "has_dft_bde": true
+  },
+  {
+    "molecule": "CCO",
+    "bond_index": 2,
+    "bond_type": "C-H",
+    "fragment1": "[H]",
+    "fragment2": "[CH2]CO",
+    "is_valid_stereo": true,
+    "bde_pred": 101.0688705444336,
+    "bdfe_pred": 91.99860382080078,
+    "bde": 100.46293588200312,
+    "bdfe": 91.755620998,
+    "set": "valid",
+    "has_dft_bde": true
+  },
+  {
+    "molecule": "CCO",
+    "bond_index": 7,
+    "bond_type": "H-O",
+    "fragment1": "[H]",
+    "fragment2": "CC[O]",
+    "is_valid_stereo": true,
+    "bde_pred": 103.7619857788086,
+    "bdfe_pred": 95.38029479980469,
+    "bde": 103.47686160899134,
+    "bdfe": 95.256493709,
+    "set": "valid",
+    "has_dft_bde": true
+  }
+]

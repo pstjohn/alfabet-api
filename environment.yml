@@ -1,0 +1,23 @@
+name: root
+channels:
+- conda-forge
+- defaults
+dependencies:
+- fastapi
+- flask
+- gunicorn
+- pandas
+- python
+- rdkit
+- scikit-learn=0.23.1
+- nomkl
+- numpy
+- wtforms
+- joblib
+- pytest
+- tensorflow
+- pytest
+- uvicorn
+- pip
+- pip:
+  - alfabet==0.2.0

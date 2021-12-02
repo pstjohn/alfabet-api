@@ -1,0 +1,52 @@
+[
+  {
+    "molecule": "CCO",
+    "bond_index": 6,
+    "fragment1": "[H]",
+    "fragment2": "C[CH]O",
+    "bde": 93.1882240449644,
+    "bdscfe": 100.44561434067516,
+    "set": "valid",
+    "distance": 0.00009800223364926948
+  },
+  {
+    "molecule": "CC1(CO)CCCC1",
+    "bond_index": 11,
+    "fragment1": "[H]",
+    "fragment2": "CC1([CH]O)CCCC1",
+    "bde": 92.96294831399813,
+    "bdscfe": 100.10492232141496,
+    "set": "valid",
+    "distance": 0.1663305842945099
+  },
+  {
+    "molecule": "CC1(C)CCOC(=O)CC1",
+    "bond_index": 19,
+    "fragment1": "[H]",
+    "fragment2": "CC1(C)C[CH]OC(=O)CC1",
+    "bde": 94.00398574500932,
+    "bdscfe": 101.45556191090432,
+    "set": "train",
+    "distance": 0.16865282018082142
+  },
+  {
+    "molecule": "C[C@@H]1C[C@H](O)[C@@H](CO)CO1",
+    "bond_index": 19,
+    "fragment1": "[H]",
+    "fragment2": "C[C@@H]1C[C@H](O)[C@@H]([CH]O)CO1",
+    "bde": 93.85024604004076,
+    "bdscfe": 101.0730395372247,
+    "set": "train",
+    "distance": 0.1801309681737075
+  },
+  {
+    "molecule": "O=S1(=O)CC[C@H](CCO)C1",
+    "bond_index": 18,
+    "fragment1": "[H]",
+    "fragment2": "O=S1(=O)CC[C@H](C[CH]O)C1",
+    "bde": 93.35388642100985,
+    "bdscfe": 100.53866822668354,
+    "set": "train",
+    "distance": 0.1876930920255558
+  }
+]
