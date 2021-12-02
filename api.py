@@ -1,12 +1,14 @@
 from typing import List, Optional
 
 import pandas as pd
+from alfabet.drawing import draw_bde, draw_mol_outlier, draw_mol
 from alfabet.fragment import get_fragments, canonicalize_smiles
+from alfabet.neighbors import get_neighbors
 from alfabet.prediction import predict_bdes, validate_inputs
 from alfabet.preprocessor import get_features
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from starlette.responses import JSONResponse
 
 api = FastAPI()
 
@@ -38,13 +40,29 @@ class BondPrediction(Bond):
     has_dft_bde: bool
 
 
+class Neighbor(BaseModel):
+    molecule: str
+    bond_index: int
+    fragment1: str
+    fragment2: str
+    bde: float
+    bdfe: float
+    set: str
+    distance: float
+
+
 class Outlier(BaseModel):
+    SMILES: str
     missing_atom: List[int]
     missing_bond: List[int]
     is_valid: bool
 
 
-@api.get("/canonicalize/{smiles}")
+class Message(BaseModel):
+    message: str
+
+
+@api.get("/canonicalize/{smiles}", responses={400: {"model": Message}})
 async def canonicalize(smiles: str):
     try:
         return canonicalize_smiles(smiles)
@@ -64,12 +82,15 @@ async def featurize(smiles: str = Depends(canonicalize)):
 
 @api.get("/validate/{smiles}", response_model=Features,
          responses={400: {"model": Outlier}})
-async def validate(features: Features = Depends(featurize)):
+async def validate(
+        smiles: str,
+        features: Features = Depends(featurize)):
     is_outlier, missing_atom, missing_bond = validate_inputs(dict(features))
     if is_outlier:
-        return JSONResponse(status_code=400,
-                            content={
+        raise HTTPException(status_code=400,
+                            detail={
                                 "is_valid": False,
+                                "SMILES": smiles,
                                 "missing_atom": missing_atom.tolist(),
                                 "missing_bond": missing_bond.tolist(),
                             })
@@ -82,11 +103,35 @@ async def validate(features: Features = Depends(featurize)):
 @api.get("/predict/{smiles}", response_model=List[BondPrediction])
 async def predict(fragments: List[Bond] = Depends(fragment),
                   features: Features = Depends(validate),
-                  draw: bool = False,
                   drop_duplicates: bool = False):
+    features = dict(features)
+    features.pop('is_valid')
     fragments = pd.DataFrame.from_records(fragments)
-    bde_pred = predict_bdes(fragments, dict(features), draw, drop_duplicates)
+    bde_pred = predict_bdes(fragments, features, drop_duplicates)
     return bde_pred.to_dict(orient='records')
+
+
+@api.get("/draw/{smiles}/{bond_index}", response_class=HTMLResponse)
+@api.get("/draw/{smiles}", response_class=HTMLResponse)
+async def draw(smiles: str = Depends(canonicalize),
+               features: Features = Depends(featurize),
+               bond_index: Optional[int] = None):
+    if bond_index:
+        return draw_bde(smiles, bond_index)
+
+    is_outlier, missing_atom, missing_bond = validate_inputs(dict(features))
+    if not is_outlier:
+        return draw_mol(smiles)
+
+    else:
+        return draw_mol_outlier(smiles, missing_atom, missing_bond)
+
+
+@api.get("/neighbors/{smiles}/{bond_index}", response_model=List[Neighbor])
+async def neighbors(bond_index: int, features: Features = Depends(validate)):
+    features = dict(features)
+    features.pop('is_valid')
+    return get_neighbors(features, bond_index).to_dict(orient='records')
 
 
 #
