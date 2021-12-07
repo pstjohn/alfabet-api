@@ -6,11 +6,16 @@ from alfabet.fragment import get_fragments, canonicalize_smiles
 from alfabet.neighbors import get_neighbors
 from alfabet.prediction import predict_bdes, validate_inputs
 from alfabet.preprocessor import get_features
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 api = FastAPI()
+api.add_middleware(CORSMiddleware,
+                   allow_origins=["*"],
+                   allow_methods=["*"],
+                   allow_headers=["*"])
 
 
 class Bond(BaseModel):
@@ -111,20 +116,20 @@ async def predict(fragments: List[Bond] = Depends(fragment),
     return bde_pred.to_dict(orient='records')
 
 
-@api.get("/draw/{smiles}/{bond_index}", response_class=HTMLResponse)
-@api.get("/draw/{smiles}", response_class=HTMLResponse)
+@api.get("/draw/{smiles}/{bond_index}", response_class=Response, responses={200: {"content": {"image/svg+xml": {}}}})
+@api.get("/draw/{smiles}", response_class=Response, responses={200: {"content": {"image/svg+xml": {}}}})
 async def draw(smiles: str = Depends(canonicalize),
                features: Features = Depends(featurize),
                bond_index: Optional[int] = None):
     if bond_index:
-        return draw_bde(smiles, bond_index)
-
-    is_outlier, missing_atom, missing_bond = validate_inputs(dict(features))
-    if not is_outlier:
-        return draw_mol(smiles)
-
+        svg = draw_bde(smiles, bond_index)
     else:
-        return draw_mol_outlier(smiles, missing_atom, missing_bond)
+        is_outlier, missing_atom, missing_bond = validate_inputs(dict(features))
+        if not is_outlier:
+            svg = draw_mol(smiles)
+        else:
+            svg = draw_mol_outlier(smiles, missing_atom, missing_bond)
+    return Response(content=svg, media_type="image/svg+xml")
 
 
 @api.get("/neighbors/{smiles}/{bond_index}", response_model=List[Neighbor])
