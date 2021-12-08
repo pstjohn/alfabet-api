@@ -1,5 +1,5 @@
 from typing import List, Optional
-
+import logging
 import pandas as pd
 from alfabet.drawing import draw_bde, draw_mol_outlier, draw_mol
 from alfabet.fragment import get_fragments, canonicalize_smiles
@@ -16,6 +16,7 @@ api.add_middleware(CORSMiddleware,
                    allow_origins=["*"],
                    allow_methods=["*"],
                    allow_headers=["*"])
+logger = logging.getLogger(__name__)
 
 
 class Bond(BaseModel):
@@ -105,14 +106,19 @@ async def validate(
         return features_out
 
 
+@api.get("/predict/{smiles}/{bond_index}", response_model=BondPrediction)
 @api.get("/predict/{smiles}", response_model=List[BondPrediction])
 async def predict(fragments: List[Bond] = Depends(fragment),
                   features: Features = Depends(validate),
-                  drop_duplicates: bool = False):
+                  drop_duplicates: bool = False,
+                  bond_index: Optional[int] = None):
     features = dict(features)
     features.pop('is_valid')
     fragments = pd.DataFrame.from_records(fragments)
     bde_pred = predict_bdes(fragments, features, drop_duplicates)
+    if bond_index is not None:
+        solo_bde = bde_pred[bde_pred['bond_index'] == bond_index]
+        return solo_bde.to_dict(orient='records')[0]
     return bde_pred.to_dict(orient='records')
 
 
@@ -121,7 +127,7 @@ async def predict(fragments: List[Bond] = Depends(fragment),
 async def draw(smiles: str = Depends(canonicalize),
                features: Features = Depends(featurize),
                bond_index: Optional[int] = None):
-    if bond_index:
+    if bond_index is not None:
         svg = draw_bde(smiles, bond_index)
     else:
         is_outlier, missing_atom, missing_bond = validate_inputs(dict(features))
