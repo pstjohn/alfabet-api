@@ -1,4 +1,5 @@
-from typing import List, Optional
+import json
+from typing import List, Optional, Dict
 
 import pandas as pd
 from alfabet.drawing import draw_bde, draw_mol_outlier, draw_mol
@@ -8,7 +9,6 @@ from alfabet.prediction import predict_bdes, validate_inputs
 from alfabet.preprocessor import get_features
 from fastapi import FastAPI, HTTPException, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 api = FastAPI()
@@ -40,8 +40,7 @@ class BondPrediction(Bond):
     bdfe_pred: float
     bde: Optional[float]
     bdfe: Optional[float]
-    set: str
-    svg: Optional[str]
+    set: Optional[str]
     has_dft_bde: bool
 
 
@@ -65,6 +64,12 @@ class Outlier(BaseModel):
 
 class Message(BaseModel):
     message: str
+
+
+def pandas_to_records(df: pd.DataFrame) -> List[Dict]:
+    """Convert a pandas dataframe to a list of dicts in a records format,
+    dropping entries that are na (i.e., optional entries)"""
+    return [row.dropna().to_dict() for _, row in df.iterrows()]
 
 
 @api.get("/canonicalize/{smiles}", responses={400: {"model": Message}})
@@ -112,17 +117,22 @@ async def predict(fragments: List[Bond] = Depends(fragment),
     features = dict(features)
     features.pop('is_valid')
     fragments = pd.DataFrame.from_records(fragments)
-    bde_pred = predict_bdes(fragments, features, drop_duplicates)
-    return bde_pred.to_dict(orient='records')
+    bde_pred = predict_bdes(fragments, features, drop_duplicates=drop_duplicates)
+    return pandas_to_records(bde_pred)
 
 
-@api.get("/draw/{smiles}/{bond_index}", response_class=Response, responses={200: {"content": {"image/svg+xml": {}}}})
+@api.get("/draw/{smiles}/{bond_index}", response_class=Response,
+         responses={200: {"content": {"image/svg+xml": {}}},
+                    400: {"model": Message}})
 @api.get("/draw/{smiles}", response_class=Response, responses={200: {"content": {"image/svg+xml": {}}}})
 async def draw(smiles: str = Depends(canonicalize),
                features: Features = Depends(featurize),
                bond_index: Optional[int] = None):
     if bond_index:
-        svg = draw_bde(smiles, bond_index)
+        try:
+            svg = draw_bde(smiles, bond_index)
+        except RuntimeError as ex:
+            raise HTTPException(status_code=400, detail=str(ex))
     else:
         is_outlier, missing_atom, missing_bond = validate_inputs(dict(features))
         if not is_outlier:
@@ -132,11 +142,15 @@ async def draw(smiles: str = Depends(canonicalize),
     return Response(content=svg, media_type="image/svg+xml")
 
 
-@api.get("/neighbors/{smiles}/{bond_index}", response_model=List[Neighbor])
+@api.get("/neighbors/{smiles}/{bond_index}", response_model=List[Neighbor],
+         responses={400: {"model": Message}})
 async def neighbors(bond_index: int, features: Features = Depends(validate)):
     features = dict(features)
     features.pop('is_valid')
-    return get_neighbors(features, bond_index).to_dict(orient='records')
+    if bond_index in features['bond_indices']:
+        return pandas_to_records(get_neighbors(features, bond_index))
+    else:
+        raise HTTPException(status_code=400, detail="Invalid bond index")
 
 
 if __name__ == "__main__":
