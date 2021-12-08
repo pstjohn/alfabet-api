@@ -1,3 +1,4 @@
+name: root
 channels:
 - conda-forge
 - defaults
@@ -11,5 +12,3 @@ dependencies:
 - tensorflow
 - uvicorn
 - pip
-- pip:
-  - alfabet==0.2.2
