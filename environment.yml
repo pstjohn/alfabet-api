@@ -12,3 +12,5 @@ dependencies:
 - tensorflow
 - uvicorn
 - pip
+- pip:
+  - alfabet >= 0.3.0
