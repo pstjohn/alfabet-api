@@ -119,7 +119,7 @@ async def validate(smiles: str, features: Features = Depends(featurize)):
         return features_out
 
 
-async def predict_bdes(
+def predict_bdes(
     features: Features = Depends(validate),
 ) -> Tuple[List[float], List[float]]:
     """This function should get replaced with the tf-serving CURL. Ideally this would
