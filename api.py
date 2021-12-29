@@ -14,12 +14,15 @@ from alfabet.prediction import (
 from alfabet.preprocessor import get_features
 from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
+import json
 from pydantic import BaseModel
+import requests
 
 api = FastAPI()
 api.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -129,7 +132,27 @@ def predict_bdes(
     Returns:
         Tuple[List[float], List[float]]: Predicted BDEs and BDFEs as list of floats
     """
-    return tf_model_forward(features)
+    logger.info("Pulling from tensorflow serving using inputs:")
+    logger.info({"instances": [features]})
+    # TODO: Sub env variables for tf serving URL
+    resp = requests.post("http://tensorflow:8501/v1/models/output_model:predict",
+                         data=json.dumps({"instances": [features]}))
+    pred = resp.json()
+    logger.info("Response is %s", pred)
+    if 'predictions' not in pred:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "is_valid": False,
+                "features": features,
+                "tensorflow_msg": pred,
+            },
+        )
+    # Format of predction is a list of lists containing a single element
+    bde = [a[0] for a in pred['predictions'][0]['bde']]
+    bdfe = [a[0] for a in pred['predictions'][0]['bdfe']]
+    return (bde, bdfe)
+    #return tf_model_forward(features)
 
 
 @api.get("/predict/{smiles}/{bond_index}", response_model=BondPrediction)
