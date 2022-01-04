@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -85,7 +85,7 @@ async def canonicalize(smiles: str):
     try:
         return canonicalize_smiles(smiles)
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid smiles")
+        raise HTTPException(status_code=400, detail="Invalid smiles: %s" % smiles)
 
 
 @api.get("/fragment/{smiles}", response_model=List[Bond])
@@ -155,8 +155,8 @@ def predict_bdes(
     #return tf_model_forward(features)
 
 
-@api.get("/predict/{smiles}/{bond_index}", response_model=BondPrediction)
-@api.get("/predict/{smiles}", response_model=List[BondPrediction])
+# @api.get("/predict/{smiles:path}/{bond_index}", response_model=BondPrediction)
+@api.get("/predict/{smiles:path}", response_model=Union[List[BondPrediction], BondPrediction])
 async def predict(
     fragments: List[Bond] = Depends(fragment),
     features: Features = Depends(validate),
@@ -179,13 +179,13 @@ async def predict(
     return pandas_to_records(bde_pred)
 
 
+# @api.get(
+#     "/draw/{smiles}/{bond_index}",
+#     response_class=Response,
+#     responses={200: {"content": {"image/svg+xml": {}}}, 400: {"model": Message}},
+# )
 @api.get(
-    "/draw/{smiles}/{bond_index}",
-    response_class=Response,
-    responses={200: {"content": {"image/svg+xml": {}}}, 400: {"model": Message}},
-)
-@api.get(
-    "/draw/{smiles}",
+    "/draw/{smiles:path}",
     response_class=Response,
     responses={200: {"content": {"image/svg+xml": {}}}},
 )
@@ -194,6 +194,7 @@ async def draw(
     features: Features = Depends(featurize),
     bond_index: Optional[int] = None,
 ):
+    logger.error("Bond index is %s", bond_index)
     if bond_index is not None:
         try:
             svg = draw_bde(smiles, bond_index)
@@ -209,7 +210,7 @@ async def draw(
 
 
 @api.get(
-    "/neighbors/{smiles}/{bond_index}",
+    "/neighbors/{smiles:path}",
     response_model=List[Neighbor],
     responses={400: {"model": Message}},
 )
