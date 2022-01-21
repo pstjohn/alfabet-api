@@ -1,8 +1,10 @@
+import json
 import logging
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+import requests
 from alfabet.drawing import draw_bde, draw_mol, draw_mol_outlier
 from alfabet.fragment import canonicalize_smiles, get_fragments
 from alfabet.neighbors import get_neighbors
@@ -14,9 +16,7 @@ from alfabet.prediction import (
 from alfabet.preprocessor import get_features
 from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
-import json
 from pydantic import BaseModel
-import requests
 
 api = FastAPI()
 api.add_middleware(
@@ -81,6 +81,7 @@ def pandas_to_records(df: pd.DataFrame) -> List[Dict]:
 
 
 @api.get("/canonicalize/{smiles}", responses={400: {"model": Message}})
+@api.get("/canonicalize", responses={400: {"model": Message}})
 async def canonicalize(smiles: str):
     try:
         return canonicalize_smiles(smiles)
@@ -89,6 +90,7 @@ async def canonicalize(smiles: str):
 
 
 @api.get("/fragment/{smiles}", response_model=List[Bond])
+@api.get("/fragment", response_model=List[Bond])
 async def fragment(smiles: str = Depends(canonicalize)):
     return get_fragments(smiles).to_dict(orient="records")
 
@@ -101,6 +103,7 @@ async def featurize(smiles: str = Depends(canonicalize), pad: bool = True):
 @api.get(
     "/validate/{smiles}", response_model=Features, responses={400: {"model": Outlier}}
 )
+@api.get("/validate", response_model=Features, responses={400: {"model": Outlier}})
 async def validate(smiles: str, features: Features = Depends(featurize)):
     is_outlier, missing_atom, missing_bond = validate_inputs(dict(features))
     if is_outlier:
@@ -135,11 +138,13 @@ def predict_bdes(
     logger.info("Pulling from tensorflow serving using inputs:")
     logger.info({"instances": [features]})
     # TODO: Sub env variables for tf serving URL
-    resp = requests.post("http://tensorflow:8501/v1/models/output_model:predict",
-                         data=json.dumps({"instances": [features]}))
+    resp = requests.post(
+        "http://tensorflow:8501/v1/models/output_model:predict",
+        data=json.dumps({"instances": [features]}),
+    )
     pred = resp.json()
     logger.info("Response is %s", pred)
-    if 'predictions' not in pred:
+    if "predictions" not in pred:
         raise HTTPException(
             status_code=502,
             detail={
@@ -149,14 +154,15 @@ def predict_bdes(
             },
         )
     # Format of predction is a list of lists containing a single element
-    bde = [a[0] for a in pred['predictions'][0]['bde']]
-    bdfe = [a[0] for a in pred['predictions'][0]['bdfe']]
+    bde = [a[0] for a in pred["predictions"][0]["bde"]]
+    bdfe = [a[0] for a in pred["predictions"][0]["bdfe"]]
     return (bde, bdfe)
-    #return tf_model_forward(features)
+    # return tf_model_forward(features)
 
 
 @api.get("/predict/{smiles}/{bond_index}", response_model=BondPrediction)
 @api.get("/predict/{smiles}", response_model=List[BondPrediction])
+@api.get("/predict", response_model=List[BondPrediction])
 async def predict(
     fragments: List[Bond] = Depends(fragment),
     features: Features = Depends(validate),
@@ -189,6 +195,11 @@ async def predict(
     response_class=Response,
     responses={200: {"content": {"image/svg+xml": {}}}},
 )
+@api.get(
+    "/draw",
+    response_class=Response,
+    responses={200: {"content": {"image/svg+xml": {}}}},
+)
 async def draw(
     smiles: str = Depends(canonicalize),
     features: Features = Depends(featurize),
@@ -210,6 +221,11 @@ async def draw(
 
 @api.get(
     "/neighbors/{smiles}/{bond_index}",
+    response_model=List[Neighbor],
+    responses={400: {"model": Message}},
+)
+@api.get(
+    "/neighbors",
     response_model=List[Neighbor],
     responses={400: {"model": Message}},
 )

@@ -2,10 +2,10 @@ import os
 
 import numpy as np
 import pandas
+import pytest
 import rdkit.Chem
-from fastapi.testclient import TestClient
-
 from api import api
+from fastapi.testclient import TestClient
 
 fastapi_client = TestClient(api)
 
@@ -57,6 +57,7 @@ def test_validate():
     assert data["is_valid"]
 
 
+@pytest.mark.skip()
 def test_predict():
     response = fastapi_client.get("/predict/C1=CC=CC=C1?drop_duplicates=True")
     assert response.status_code == 200

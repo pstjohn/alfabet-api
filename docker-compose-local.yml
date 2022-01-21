@@ -1,0 +1,14 @@
+services:
+  alfabet-api:
+    build: .
+    ports:
+      - "8000:8000"
+    links:
+      - tensorflow
+    # TODO: /root mount for cached model files
+  tensorflow:
+    image: tensorflow/serving
+    volumes:
+      - ./models:/models
+    environment:
+      - MODEL_NAME=output_model

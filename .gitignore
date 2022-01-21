@@ -115,3 +115,5 @@ dmypy.json
 
 # pycharm
 .idea/
+.vscode/
+models/

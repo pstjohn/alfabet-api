@@ -5,7 +5,7 @@ RUN conda install -c conda-forge mamba
 COPY environment.yml .
 RUN mamba env update -f environment.yml && \
     conda clean --all --yes
-RUN pip install git+https://github.com/NREL/alfabet.git@updates-for-fastapi
+RUN pip install git+https://github.com/NREL/alfabet.git@fastapi-changes
 COPY api.py .
 COPY tests .
 
